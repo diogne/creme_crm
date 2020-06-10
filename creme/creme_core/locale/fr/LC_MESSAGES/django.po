@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Creme Creme-Core 2.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-07-21 21:19+0200\n"
+"POT-Creation-Date: 2020-07-28 07:21+0200\n"
 "Last-Translator: Hybird <contact@hybird.org>\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
@@ -37,6 +37,7 @@ msgstr "Modifier"
 #: actions.py:49 templates/creme_core/bricks/base/hat-card.html:108
 #: templates/creme_core/bricks/generic/hat-bar.html:47
 #: templates/creme_core/generics/blockform/delete-popup.html:4
+#: templates/creme_core/view_property_type.html:37
 #: templatetags/creme_bricks.py:136
 msgid "Delete"
 msgstr "Supprimer"
@@ -2153,7 +2154,7 @@ msgstr "Ce bloc est utilisé dans la configuration par défaut de \"Ma page\""
 msgid "This block is used in the configuration of «{}» for \"My page\""
 msgstr "Ce bloc est utilisé dans la configuration de «{}» pour \"Ma page\""
 
-#: models/bricks.py:602 models/bricks.py:1022
+#: models/bricks.py:602 models/bricks.py:1031
 msgid "Block ID"
 msgstr "Identifiant de bloc"
 
@@ -3808,6 +3809,12 @@ msgstr "Aller à la configuration des types"
 #: templates/creme_core/view_property_type.html:26
 msgid "Property type"
 msgstr "Type de propriété"
+
+#: templates/creme_core/view_property_type.html:37
+#, fuzzy
+#| msgid "Are you sure?"
+msgid "Are you sure ?"
+msgstr "Êtes-vous sûr ?"
 
 #: templatetags/creme_bricks.py:392
 msgid "Collapse block"
