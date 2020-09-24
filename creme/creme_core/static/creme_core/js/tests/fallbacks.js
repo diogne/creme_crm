@@ -781,4 +781,62 @@ QUnit.test('fallbacks.String.escapeHTML', function() {
     equal('  &"\'<>\u00A0'.escapeHTML(), '  &amp;&quot;&apos;&lt;&gt;&nbsp;');
 });
 
+QUnit.parametrize('fallbacks.Math.scaleRound', [
+    [6.28318, undefined, 6],
+    [6.28318, 0, 6],
+    [6.28318, 10, 6.28318],
+    [6.28318, 4, 6.2832],
+    [6.28318, 1, 6.3]
+], function(value, precision, expected, assert) {
+    equal(expected, Math.scaleRound(value, precision));
+});
+
+QUnit.parametrize('fallbacks.Math.scaleTrunc', [
+    [6.28318, undefined, 6],
+    [6.28318, 0, 6],
+    [6.28318, 10, 6.28318],
+    [6.28318, 4, 6.2831],
+    [6.28318, 1, 6.2]
+], function(value, precision, expected, assert) {
+    equal(expected, Math.scaleTrunc(value, precision));
+});
+
+QUnit.parametrize('fallbacks.Math.clamp', [
+    [6.28318, 0, undefined, 6.28318],
+    [6.28318, 3.14, undefined, 6.28318],
+    [-6.28318, 3.14, undefined, 3.14],
+    [-6.28318, undefined, 3.14, -6.28318],
+    [6.28318, undefined, 3.14, 3.14],
+    [6.28318, 0, 3.14, 3.14],
+    [-6.28318, 0, 3.14, 0],
+    [6.28318, 7, 8, 7],
+    [15, 7, 8, 8]
+], function(value, min, max, expected, assert) {
+    equal(expected, Math.clamp(value, min, max));
+});
+
+QUnit.parametrize('fallbacks.Math.absRound', [
+    [0, 0],
+    [-1, 0],
+    [1, 1],
+    [0.3, 0],
+    [-0.3, 0],
+    [0.5, 1],
+    [-0.5, 0],
+    [0.999, 1],
+    [-0.999, 0]
+], function(value, expected, assert) {
+    equal(expected, Math.absRound(value));
+});
+
+QUnit.parametrize('fallbacks.Math.sum', [
+    [[], 0.0],
+    [[[]], 0.0],
+    [[-1], -1.0],
+    [[-0.21, 2.78, 3.33], (-0.21 + 2.78 + 3.33)],
+    [[[-0.21, 2.78], 3.33], (-0.21 + 2.78 + 3.33)]
+], function(args, expected, assert) {
+    equal(expected, Math.sum.apply(null, args));
+});
+
 }(jQuery));

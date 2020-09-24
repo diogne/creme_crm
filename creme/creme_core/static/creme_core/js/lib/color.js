@@ -19,19 +19,6 @@
 (function($) {
 "use strict";
 
-var absround = function(value) {
-    return (0.5 + value) << 0;
-};
-
-var scaleround = function(value, precision) {
-    var scale = Math.pow(10, precision || 0);
-    return Math.round(value * scale) / scale;
-};
-
-var clamp = function(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-};
-
 window.RGBColor = function(value) {
     if (Object.isString(value)) {
         this.hex(value);
@@ -112,8 +99,8 @@ RGBColor.prototype = {
             return {
                 h: 0,
                 s: 0,
-                l: absround(lightness * 100),
-                b: absround(brightness * 100)
+                l: Math.absRound(lightness * 100),
+                b: Math.absRound(brightness * 100)
             };
         };
 
@@ -132,10 +119,10 @@ RGBColor.prototype = {
         hue = hue / 6;
 
         return {
-            h: absround(hue * 360),
-            s: absround(saturation * 100),
-            l: absround(lightness * 100),
-            b: absround(brightness * 100)
+            h: Math.absRound(hue * 360),
+            s: Math.absRound(saturation * 100),
+            l: Math.absRound(lightness * 100),
+            b: Math.absRound(brightness * 100)
         };
     },
 
@@ -148,7 +135,7 @@ RGBColor.prototype = {
         var min = Math.min(r, g, b);
         var lightness = (max + min) / 2;
 
-        return absround(lightness * 100);
+        return Math.absRound(lightness * 100);
     },
 
     intensity: function(gamma) {
@@ -159,11 +146,11 @@ RGBColor.prototype = {
         var b = Math.pow(this.b / 255, gamma);
 
         var l = 0.212671 * r + 0.715160 * g + 0.072169 * b;
-        return clamp(scaleround(l, 3), 0, 1);
+        return Math.clamp(Math.scaleRound(l, 3), 0, 1);
     },
 
     grayscale: function(gamma) {
-        var c = clamp(this.intensity(gamma) * 255, 0, 255);
+        var c = Math.clamp(this.intensity(gamma) * 255, 0, 255);
         return new RGBColor({r: c, g: c, b: c});
     },
 
@@ -173,7 +160,7 @@ RGBColor.prototype = {
 
         // contrast ratio 1 to 21
         var c = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
-        return clamp(scaleround(c, 3), 1, 21);
+        return Math.clamp(Math.scaleRound(c, 3), 1, 21);
     },
 
     foreground: function(gamma) {
