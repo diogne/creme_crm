@@ -142,6 +142,18 @@ class _LinesBrick(SimpleBrick):
         ))
 
 
+class OrderLinesBrick(_LinesBrick):
+    dependencies = (Relation, CreditNote, Quote, Invoice, SalesOrder, TemplateBase)
+    relation_type_deps = (constants.REL_SUB_HAS_LINE, )
+    target_ctypes = (CreditNote, Quote, Invoice, SalesOrder, TemplateBase)
+
+    id_ = SimpleBrick.generate_id('billing', 'order_lines')
+    verbose_name = _('Order lines')
+    template_name = 'billing/bricks/order.html'
+
+    line_model = ProductLine
+
+
 class ProductLinesBrick(_LinesBrick):
     id_ = SimpleBrick.generate_id('billing', 'product_lines')
     verbose_name = _('Product lines')
