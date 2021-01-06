@@ -1,6 +1,6 @@
 /*******************************************************************************
     Creme is a free/open-source Customer Relationship Management software
-    Copyright (C) 2020  Hybird
+    Copyright (C) 2021  Hybird
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published by
@@ -21,11 +21,11 @@
 
 creme.form = creme.form || {};
 
-var __ident = function(value) {
-    return value;
-};
+function __stripPrefix(value, prefix) {
+    return prefix ? value.substr(prefix.length) : value;
+}
 
-var __addRawEntry = function(data, key, value) {
+function __addRawEntry(data, key, value) {
     if (!Object.isEmpty(key) && !Object.isNone(value)) {
         var stored = data[key];
 
@@ -37,7 +37,7 @@ var __addRawEntry = function(data, key, value) {
             data[key] = stored.concat(value);
         }
     }
-};
+}
 
 creme.form.Form = creme.component.Component.sub({
     _init_: function(element, options) {
@@ -47,8 +47,6 @@ creme.form.Form = creme.component.Component.sub({
         Assert.that(element.size() === 1, 'A single DOM element is required');
 
         options = $.extend({
-            validator: __ident,
-
             fieldSelector: 'input:not([type="submit"]), select, textarea',
             errorListSelector: '.errorlist',
             submitSelector: '[type="submit"]',
@@ -64,6 +62,7 @@ creme.form.Form = creme.component.Component.sub({
         this._fieldOptions = options.fields || {};
 
         this.constraints(options.constraints || []);
+        this.prefix(options.prefix || '');
 
         this.fieldSelector(options.fieldSelector);
         this.submitSelector(options.submitSelector);
@@ -96,6 +95,15 @@ creme.form.Form = creme.component.Component.sub({
 
     one: function() {
         this._element.one.apply(this._element, Array.copy(arguments));
+    },
+
+    prefix: function(prefix) {
+        if (prefix === undefined) {
+            return this._prefix || '';
+        }
+
+        this._prefix = Assert.that(Object.isString(prefix), "Prefix of fieldnames must be a string");
+        return this;
     },
 
     constraints: function(constraints) {
@@ -206,10 +214,12 @@ creme.form.Form = creme.component.Component.sub({
         this.fields().forEach(function(field) {
             field.reset();
         });
+
+        return this;
     },
 
     initialData: function(data) {
-        if (data !== undefined) {
+        if (Object.isNone(data) === false) {
             this.fields().forEach(function(field) {
                 field.initial(data[field.name()]);
             });
@@ -220,16 +230,14 @@ creme.form.Form = creme.component.Component.sub({
         var output = {};
 
         this.fields().forEach(function(field) {
-            if (field.name()) {
-                __addRawEntry(output, field.name(), field.initial());
-            }
+            __addRawEntry(output, field.name(), field.initial());
         });
 
         return output;
     },
 
     data: function(data) {
-        if (data !== undefined) {
+        if (Object.isNone(data) === false) {
             this.fields().forEach(function(field) {
                 field.value(data[field.name()]);
             });
@@ -247,47 +255,39 @@ creme.form.Form = creme.component.Component.sub({
     },
 
     clean: function(options) {
-        options = options || {};
+        options = $.extend({
+            keepPrefix: true
+        }, options || {});
 
-        var data = this.data();
         var cleanedData = {};
-        var isValid = true;
         var noValidate = this.noValidate();
         var fields = this.fields();
 
-        fields.forEach(function(field) {
-            var name = field.name();
-
-            try {
-                __addRawEntry(cleanedData, name, field.clean());
-            } catch (e) {
-                isValid = noValidate;
-            }
-        });
-
         var output = {
-            data: data,
+            prefix: this.prefix(),
+            data: this.data(),
             cleanedData: cleanedData,
-            isValid: isValid,
+            isValid: true,
             errors: [],
             fieldErrors: this.errors()
         };
 
-        if (isValid) {
-            output = this._applyConstraints(output);
+        fields.forEach(function(field) {
+            try {
+                var value = field.clean();
+                __addRawEntry(cleanedData, field.name(), value);
+            } catch (e) {
+                output.isValid = noValidate;
+            }
+        });
 
-            fields.forEach(function(field) {
-                var error = output.fieldErrors[field.name()];
-
-                if (error && error.code) {
-                    field.error(error);
-                }
-            });
-
-            isValid = output.isValid = (Object.isEmpty(output.fieldErrors) && Object.isEmpty(output.errors)) || noValidate;
+        if (output.isValid) {
+            output = this._applyConstraints(output, options);
         }
 
-        this.trigger('clean', output);
+        if (options.stopPropagation) {
+            this.trigger('clean', output);
+        }
 
         if (output.isValid || options.noThrow) {
             return output;
@@ -299,14 +299,41 @@ creme.form.Form = creme.component.Component.sub({
         }
     },
 
-    _applyConstraints: function(data) {
+    _stripDataPrefix: function(data, prefix) {
+        if (prefix) {
+            return Object.fromEntries(Object.entries(data).map(function(entry) {
+                return [__stripPrefix(entry[0], prefix), entry[1]];
+            }));
+        } else {
+            return $.extend({}, data);
+        }
+    },
+
+    _addDataPrefix: function(data, prefix) {
+        if (prefix) {
+            return Object.fromEntries(Object.entries(data).map(function(entry) {
+                return [prefix + entry[0], entry[1]];
+            }));
+        } else {
+            return $.extend({}, data);
+        }
+    },
+
+    _applyConstraints: function(input, options) {
+        var noValidate = this.noValidate();
+        var prefix = input.prefix;
+
         var output = $.extend({
             errors: []
-        }, data);
+        }, input, {
+            data: this._stripDataPrefix(input.data, prefix),
+            cleanedData: this._stripDataPrefix(input.cleanedData, prefix),
+            fieldErrors: this._stripDataPrefix(input.fieldErrors, prefix)
+        });
 
         this.constraints().forEach(function(constraint) {
             try {
-                constraint(this, output);
+                constraint(this, output, options);
             } catch (e) {
                 if (e.field) {
                     __addRawEntry(output.fieldErrors, e.field, {
@@ -317,6 +344,24 @@ creme.form.Form = creme.component.Component.sub({
                 }
             }
         }.bind(this));
+
+        this.fields().forEach(function(field) {
+            var name = __stripPrefix(field.name(), prefix);
+            var error = output.fieldErrors[name];
+
+            if (error && error.code) {
+                field.error(error);
+            }
+        });
+
+        output.isValid = (Object.isEmpty(output.fieldErrors) && Object.isEmpty(output.errors)) || noValidate;
+
+        if (prefix && options.keepPrefix) {
+            output.data = input.data;
+            output.cleanedData = this._addDataPrefix(output.cleanedData, prefix);
+            output.fieldErrors = this._addDataPrefix(output.fieldErrors, prefix);
+            output.prefix = prefix;
+        }
 
         return output;
     },
@@ -352,11 +397,12 @@ creme.form.Form = creme.component.Component.sub({
 
     _boundField: function(field) {
         var bound = field.flyfield('instance');
+        var prefix = this.prefix();
 
         if (Object.isNone(bound)) {
             bound = field.flyfield($.extend({}, {
                 errorMessages: this._errorMessages
-            }, this._fieldOptions[field.attr('name')] || {}));
+            }, this._fieldOptions[__stripPrefix(field.attr('name'), prefix)] || {}));
         }
 
         return bound;
@@ -368,8 +414,12 @@ creme.form.Form = creme.component.Component.sub({
 
     fields: function() {
         var _boundField = this._boundField.bind(this);
+        var prefix = this.prefix();
 
-        return this.selectFields().filter('[name]:not([name=""])').map(function() {
+        return this.selectFields().filter(function() {
+            var name = $(this).attr('name');
+            return name && name.startsWith(prefix) && name.length > prefix.length;
+        }).map(function() {
             return _boundField($(this));
         }).get();
     },
@@ -378,8 +428,11 @@ creme.form.Form = creme.component.Component.sub({
         Assert.not(Object.isEmpty(name), 'Field name cannot be empty');
 
         var _boundField = this._boundField.bind(this);
+        var prefix = this.prefix();
 
-        return this.selectFields().filter('[name="' + name + '"]').map(function() {
+        return this.selectFields().filter(
+            '[name="${prefix}${name}"]'.template({prefix: prefix, name: name})
+        ).map(function() {
             return _boundField($(this));
         }).get(0);
     },
@@ -394,6 +447,17 @@ creme.form.Form = creme.component.Component.sub({
         return this.ajaxQuery(data, options).post();
     },
 
+    _buildAjaxData: function(data) {
+        var output = {};
+        var prefix = this.prefix();
+
+        Object.entries($.extend({}, data || {}, this.clean().cleanedData)).forEach(function(entry) {
+            output[prefix + entry[0]] = entry[1];
+        });
+
+        return output;
+    },
+
     ajaxQuery: function(data, options) {
         options = $.extend({
             url: this.url()
@@ -404,7 +468,7 @@ creme.form.Form = creme.component.Component.sub({
 
         query.url(options.url)
              .data(function() {
-                  return $.extend({}, data || {}, self.clean().cleanedData);
+                  return self._buildAjaxData(data);
               });
 
         query.on('start', function() {
@@ -482,8 +546,10 @@ creme.utils.newJQueryPlugin({
         'clean', 'submit', 'reset', 'validateHtml'
     ],
     properties: [
-        'url', 'responsive', 'initialData', 'data', 'preventBrowserTooltip',
-        'constraints', 'isValid', 'isValidHtml', 'isSubmitting'
+        'url', 'prefix', 'constraints',
+        'responsive', 'noValidate', 'preventBrowserTooltip', 'scrollOnError',
+        'initialData', 'data', 'errors',
+        'fields', 'isValid', 'isValidHtml', 'isSubmitting'
     ]
 });
 
