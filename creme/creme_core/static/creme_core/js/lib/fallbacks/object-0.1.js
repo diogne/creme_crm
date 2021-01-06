@@ -128,6 +128,18 @@
         }
     });
 
+    /* istanbul ignore next : compatibility with IE */
+    appendStatic('fromEntries', function(entries) {
+        var output = {};
+
+        for (var i in entries) {
+            var entry = entries[i];
+            output[entry[0]] = entry[1];
+        }
+
+        return output;
+    });
+
     appendStatic('proxy', function(delegate, context, options) {
         if (Object.isNone(delegate)) {
             return;
