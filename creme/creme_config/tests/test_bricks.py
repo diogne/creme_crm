@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import json
 from copy import deepcopy
 from functools import partial
 
@@ -280,20 +281,13 @@ class BricksConfigTestCase(BrickTestCaseMixin, CremeTestCase):
 
         with self.assertNoException():
             fields = context['form'].fields
-            top_choices    = fields['top'].choices
-            left_choices   = fields['left'].choices
-            right_choices  = fields['right'].choices
-            bottom_choices = fields['bottom'].choices
+            locations_choices = [brick_id for (brick_id, brick) in fields['locations'].choices]
 
         self.assertNotIn('hat', fields)
 
         bricks = [*self.brick_registry.get_compatible_bricks(model)]
         self.assertGreaterEqual(len(bricks), 5)
-        self.assertInChoices(
-            value=CompleteBrick1.id_,
-            label=CompleteBrick1.verbose_name,
-            choices=top_choices,
-        )
+        self.assertIn(CompleteBrick1.id_, locations_choices)
 
         brick_top1   = bricks[0]
         brick_top2   = bricks[1]
@@ -302,65 +296,24 @@ class BricksConfigTestCase(BrickTestCaseMixin, CremeTestCase):
         brick_right  = bricks[3]
         brick_bottom = bricks[4]
 
-        brick_top_index1 = self.assertInChoices(
-            value=brick_top1.id_,
-            label=brick_top1.verbose_name,
-            choices=top_choices,
-        )
-        brick_top_index2 = self.assertInChoices(
-            value=brick_top2.id_,
-            label=brick_top2.verbose_name,
-            choices=top_choices,
-        )
-        brick_left_index1 = self.assertInChoices(
-            value=brick_left1.id_,
-            label=brick_left1.verbose_name,
-            choices=left_choices,
-        )
-        brick_left_index2 = self.assertInChoices(
-            value=brick_left2.id_,
-            label=brick_left2.verbose_name,
-            choices=left_choices,
-        )
-        brick_right_index = self.assertInChoices(
-            value=brick_right.id_,
-            label=brick_right.verbose_name,
-            choices=right_choices,
-        )
-        brick_bottom_index = self.assertInChoices(
-            value=brick_bottom.id_,
-            label=brick_bottom.verbose_name,
-            choices=bottom_choices,
-        )
+        self.assertIn(brick_top1.id_, locations_choices)
+        self.assertIn(brick_top2.id_, locations_choices)
+        self.assertIn(brick_left1.id_, locations_choices)
+        self.assertIn(brick_left2.id_, locations_choices)
+        self.assertIn(brick_right.id_, locations_choices)
+        self.assertIn(brick_bottom.id_, locations_choices)
 
+        locations_data = {
+            'top': [brick_top1.id_, brick_top2.id_],
+            'left': [brick_left1.id_, brick_left2.id_],
+            'right': [brick_right.id_],
+            'bottom': [brick_bottom.id_],
+        }
         response = self.client.post(
             url,
             data={
                 'role': role.id if role else '',
-
-                f'top_check_{brick_top_index1}': 'on',
-                f'top_value_{brick_top_index1}': brick_top1.id_,
-                f'top_order_{brick_top_index1}': 1,
-
-                f'top_check_{brick_top_index2}': 'on',
-                f'top_value_{brick_top_index2}': brick_top2.id_,
-                f'top_order_{brick_top_index2}': 2,
-
-                f'left_check_{brick_left_index1}': 'on',
-                f'left_value_{brick_left_index1}': brick_left1.id_,
-                f'left_order_{brick_left_index1}': 1,
-
-                f'left_check_{brick_left_index2}': 'on',
-                f'left_value_{brick_left_index2}': brick_left2.id_,
-                f'left_order_{brick_left_index2}': 2,
-
-                f'right_check_{brick_right_index}': 'on',
-                f'right_value_{brick_right_index}': brick_right.id_,
-                f'right_order_{brick_right_index}': 1,
-
-                f'bottom_check_{brick_bottom_index}': 'on',
-                f'bottom_value_{brick_bottom_index}': brick_bottom.id_,
-                f'bottom_order_{brick_bottom_index}': 1,
+                'locations': json.dumps(locations_data),
             },
         )
         self.assertNoFormError(response)
@@ -467,7 +420,7 @@ class BricksConfigTestCase(BrickTestCaseMixin, CremeTestCase):
 
         with self.assertNoException():
             fields = response.context['form'].fields
-            top_choices = fields['top'].choices
+            locations_choices = [brick_id for (brick_id, brick) in fields['locations'].choices]
             hat_f = fields['hat']
             hat_choices = hat_f.choices
 
@@ -490,19 +443,12 @@ class BricksConfigTestCase(BrickTestCaseMixin, CremeTestCase):
 
         self.assertEqual(generic_brick_id, hat_f.initial)
 
-        brick_top_index = self.assertInChoices(
-            value=CompleteBrick1.id_,
-            label=CompleteBrick1.verbose_name,
-            choices=top_choices,
-        )
+        self.assertIn(CompleteBrick1.id_, locations_choices)
         response = self.client.post(
             url,
             data={
                 'hat': FakeContactHatBrick.id_,
-
-                f'top_check_{brick_top_index}': 'on',
-                f'top_value_{brick_top_index}': CompleteBrick1.id_,
-                f'top_order_{brick_top_index}': 1,
+                'locations': json.dumps({'top': [CompleteBrick1.id_]})
             },
         )
         self.assertNoFormError(response)
@@ -555,20 +501,12 @@ class BricksConfigTestCase(BrickTestCaseMixin, CremeTestCase):
 
         with self.assertNoException():
             fields = context['form'].fields
-            top_choices    = fields['top'].choices
-            left_choices   = fields['left'].choices
-            right_choices  = fields['right'].choices
-            bottom_choices = fields['bottom'].choices
+            locations_choices = [brick_id for (brick_id, brick) in fields['locations'].choices]
 
         bricks = [*self.brick_registry.get_compatible_bricks(model)]
         self.assertGreaterEqual(len(bricks), 5)
-        self.assertInChoices(
-            value=CompleteBrick1.id_,
-            label=CompleteBrick1.verbose_name,
-            choices=top_choices,
-        )
-
-        self.assertNotInChoices(value=HomeOnlyBrick1.id_, choices=top_choices)
+        self.assertIn(CompleteBrick1.id_, locations_choices)
+        self.assertNotIn(HomeOnlyBrick1.id_, locations_choices)
 
         brick_top1   = bricks[0]
         brick_top2   = bricks[1]
@@ -577,63 +515,23 @@ class BricksConfigTestCase(BrickTestCaseMixin, CremeTestCase):
         brick_right  = bricks[3]
         brick_bottom = bricks[4]
 
-        brick_top_index1 = self.assertInChoices(
-            value=brick_top1.id_,
-            label=brick_top1.verbose_name,
-            choices=top_choices,
-        )
-        brick_top_index2 = self.assertInChoices(
-            value=brick_top2.id_,
-            label=brick_top2.verbose_name,
-            choices=top_choices,
-        )
-        brick_left_index1 = self.assertInChoices(
-            value=brick_left1.id_,
-            label=brick_left1.verbose_name,
-            choices=left_choices,
-        )
-        brick_left_index2 = self.assertInChoices(
-            value=brick_left2.id_,
-            label=brick_left2.verbose_name,
-            choices=left_choices,
-        )
-        brick_right_index = self.assertInChoices(
-            value=brick_right.id_,
-            label=brick_right.verbose_name,
-            choices=right_choices,
-        )
-        brick_bottom_index = self.assertInChoices(
-            value=brick_bottom.id_,
-            label=brick_bottom.verbose_name,
-            choices=bottom_choices,
-        )
+        self.assertIn(brick_top1.id_, locations_choices)
+        self.assertIn(brick_top2.id_, locations_choices)
+        self.assertIn(brick_left1.id_, locations_choices)
+        self.assertIn(brick_left2.id_, locations_choices)
+        self.assertIn(brick_right.id_, locations_choices)
+        self.assertIn(brick_bottom.id_, locations_choices)
 
+        locations_data = {
+            'top': [brick_top1.id_, brick_top2.id_],
+            'left': [brick_left1.id_, brick_left2.id_],
+            'right': [brick_right.id_],
+            'bottom': [brick_bottom.id_],
+        }
         response = self.client.post(
             url,
             data={
-                f'top_check_{brick_top_index1}': 'on',
-                f'top_value_{brick_top_index1}': brick_top1.id_,
-                f'top_order_{brick_top_index1}': 1,
-
-                f'top_check_{brick_top_index2}': 'on',
-                f'top_value_{brick_top_index2}': brick_top2.id_,
-                f'top_order_{brick_top_index2}': 2,
-
-                f'left_check_{brick_left_index1}': 'on',
-                f'left_value_{brick_left_index1}': brick_left1.id_,
-                f'left_order_{brick_left_index1}': 1,
-
-                f'left_check_{brick_left_index2}': 'on',
-                f'left_value_{brick_left_index2}': brick_left2.id_,
-                f'left_order_{brick_left_index2}': 2,
-
-                f'right_check_{brick_right_index}': 'on',
-                f'right_value_{brick_right_index}': brick_right.id_,
-                f'right_order_{brick_right_index}': 1,
-
-                f'bottom_check_{brick_bottom_index}': 'on',
-                f'bottom_value_{brick_bottom_index}': brick_bottom.id_,
-                f'bottom_order_{brick_bottom_index}': 1,
+                'locations': json.dumps(locations_data)
             },
         )
         self.assertNoFormError(response)
@@ -738,36 +636,29 @@ class BricksConfigTestCase(BrickTestCaseMixin, CremeTestCase):
 
         with self.assertNoException():
             fields = response.context['form'].fields
-            top_field    = fields['top']
-            left_field   = fields['left']
-            right_field  = fields['right']
-            bottom_field = fields['bottom']
+            locations_field = fields['locations']
+            locations_choices = [brick_id for (brick_id, brick) in locations_field.choices]
 
         brick_top_id1 = bricks[0].id_
         brick_top_id2 = bricks[1].id_
+        expected_initial_locations = {
+            'top': [brick_top_id1],
+            'left': [brick_top_id2],
+            'right': [bricks[2].id_],
+            'bottom': [bricks[3].id_],
+        }
+        self.assertEqual(expected_initial_locations, locations_field.initial)
 
-        self.assertEqual([brick_top_id1], top_field.initial)
-        self.assertEqual([brick_top_id2], left_field.initial)
-        self.assertEqual([bricks[2].id_], right_field.initial)
-        self.assertEqual([bricks[3].id_], bottom_field.initial)
+        self.assertIn(brick_top_id1, locations_choices)
+        self.assertIn(brick_top_id2, locations_choices)
 
-        brick_top_index1 = self.assertInChoices(
-            value=brick_top_id1, label=bricks[0].verbose_name, choices=top_field.choices,
-        )
-        brick_top_index2 = self.assertInChoices(
-            value=brick_top_id2, label=bricks[1].verbose_name, choices=top_field.choices,
-        )
-
+        locations_data = {
+            'top': [brick_top_id1, brick_top_id2],
+        }
         response = self.client.post(
             url,
             data={
-                f'top_check_{brick_top_index1}': 'on',
-                f'top_value_{brick_top_index1}': brick_top_id1,
-                f'top_order_{brick_top_index1}': 1,
-
-                f'top_check_{brick_top_index2}': 'on',
-                f'top_value_{brick_top_index2}': brick_top_id2,
-                f'top_order_{brick_top_index2}': 2,
+                'locations': json.dumps(locations_data),
             },
         )
         self.assertNoFormError(response)
@@ -806,19 +697,14 @@ class BricksConfigTestCase(BrickTestCaseMixin, CremeTestCase):
         brick_id = brick.id_
 
         with self.assertNoException():
-            top_choices = response.context['form'].fields['top'].choices
+            locations_field = response.context['form'].fields['locations']
+            locations_choices = [brick_id for (brick_id, brick) in locations_field.choices]
 
-        index = self.assertInChoices(
-            value=brick_id,
-            label=brick.verbose_name,
-            choices=top_choices,
-        )
+        self.assertIn(brick_id, locations_choices)
         response = self.client.post(
             url,
             data={
-                f'top_check_{index}': 'on',
-                f'top_value_{index}': brick_id,
-                f'top_order_{index}': 1,
+                'locations': json.dumps({'top': [brick_id]}),
             },
         )
         self.assertNoFormError(response)
@@ -846,31 +732,22 @@ class BricksConfigTestCase(BrickTestCaseMixin, CremeTestCase):
 
         with self.assertNoException():
             fields = response.context['form'].fields
-            left_field  = fields['left']
-            right_field = fields['right']
+            locations_choices = [brick_id for (brick_id, brick) in fields['locations'].choices]
 
         bricks = [*self.brick_registry.get_compatible_bricks(model)]
         self.assertTrue(bricks)
 
         def post(brick):
             brick_left_id = block_right_id = brick.id_  # <= same block !!
-            brick_left_index = self.assertInChoices(
-                value=brick_left_id, label=brick.verbose_name, choices=left_field.choices,
-            )
-            brick_right_index = self.assertInChoices(
-                value=block_right_id, label=brick.verbose_name, choices=right_field.choices,
-            )
+            self.assertIn(brick_left_id, locations_choices)
+            self.assertIn(block_right_id, locations_choices)
 
             response = self.client.post(
                 url,
                 data={
-                    f'right_check_{brick_right_index}': 'on',
-                    f'right_value_{brick_right_index}': block_right_id,
-                    f'right_order_{brick_right_index}': 1,
-
-                    f'left_check_{brick_left_index}': 'on',
-                    f'left_value_{brick_left_index}': brick_left_id,
-                    f'left_order_{brick_left_index}': 1,
+                    'locations': json.dumps(
+                        {'right': [block_right_id], 'left': [brick_left_id]}
+                    ),
                 },
             )
             self.assertFormError(
@@ -912,18 +789,11 @@ class BricksConfigTestCase(BrickTestCaseMixin, CremeTestCase):
         response = self.assertGET200(self._build_editdetail_url(ct))
 
         with self.assertNoException():
-            top_choices = response.context['form'].fields['top'].choices
+            fields = response.context['form'].fields
+            locations_choices = [brick_id for (brick_id, brick) in fields['locations'].choices]
 
-        self.assertInChoices(
-            rtype_brick_id,
-            label=_('Relationship block: «{predicate}»').format(predicate=rtype.predicate),
-            choices=top_choices,
-        )
-        self.assertInChoices(
-            ibci.brick_id,
-            label=f'Instance brick #{ibci.brick_id} for detail-view',
-            choices=top_choices,
-        )
+        self.assertIn(rtype_brick_id, locations_choices)
+        self.assertIn(ibci.brick_id, locations_choices)
 
     def test_edit_detailview08(self):
         "Invalid models."
@@ -946,7 +816,7 @@ class BricksConfigTestCase(BrickTestCaseMixin, CremeTestCase):
 
         with self.assertNoException():
             fields = response.context['form'].fields
-            top_choices = fields['top'].choices
+            locations_choices = [brick_id for (brick_id, brick) in fields['locations'].choices]
             hat_f = fields['hat']
             hat_choices = hat_f.choices
 
@@ -969,19 +839,12 @@ class BricksConfigTestCase(BrickTestCaseMixin, CremeTestCase):
         self.assertEqual(generic_id, hat_f.initial)
 
         brick_top_id = CompleteBrick1.id_
-        brick_top_index = self.assertInChoices(
-            value=brick_top_id,
-            label=CompleteBrick1.verbose_name,
-            choices=top_choices,
-        )
+        self.assertIn(brick_top_id, locations_choices)
         response = self.client.post(
             url,
             data={
                 'hat': FakeContactHatBrick.id_,
-
-                f'top_check_{brick_top_index}': 'on',
-                f'top_value_{brick_top_index}': brick_top_id,
-                f'top_order_{brick_top_index}': 1,
+                'locations': json.dumps({'top': [brick_top_id]}),
             },
         )
         self.assertNoFormError(response)
@@ -1019,6 +882,37 @@ class BricksConfigTestCase(BrickTestCaseMixin, CremeTestCase):
             hat_f = response.context['form'].fields['hat']
 
         self.assertEqual(FakeContactHatBrick.id_, hat_f.initial)
+
+    def test_edit_detailview__invalid_json(self):
+        "Invalid data provided to the locations field"
+        self.login()
+
+        url = self._build_editdetail_url(ct=None)
+
+        response = self.assertPOST200(url, data={'locations': "{not a dict"})
+        self.assertFormError(
+            response, 'form', 'locations', _('Enter a valid JSON.')
+        )
+
+    @parameterized.expand([
+        [{'locations': "42"}],
+        [{'locations': json.dumps("not a dict")}],
+        [{'locations': json.dumps(["not a dict"])}],
+        [{'locations': json.dumps({"top": "lot a list"})}],
+    ])
+    def test_edit_detailview__invalid_formats(self, payload):
+        "Invalid data provided to the locations field"
+        self.login()
+
+        url = self._build_editdetail_url(ct=None)
+
+        response = self.assertPOST200(url, data=payload)
+        self.assertFormError(
+            response, 'form', 'locations', _("The value doesn't match the expected format.")
+        )
+        self.assertFormError(
+            response, 'form', None, _('Your configuration is empty !')
+        )
 
     def test_delete_detailview01(self):
         "Can not delete default conf"

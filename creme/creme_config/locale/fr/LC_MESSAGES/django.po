@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Creme Creme-Config 2.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-03-10 17:40+0100\n"
+"POT-Creation-Date: 2021-03-12 12:04+0100\n"
 "Last-Translator: Hybird <contact@hybird.org>\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
@@ -275,18 +275,6 @@ msgstr "La zone de bloc «{}» n'est pas valide."
 msgid "Header block"
 msgstr "Bloc entête"
 
-msgid "Blocks to display on top"
-msgstr "Blocs à afficher en haut"
-
-msgid "Blocks to display on left side"
-msgstr "Blocs à afficher à gauche"
-
-msgid "Blocks to display on right side"
-msgstr "Blocs à afficher à droite"
-
-msgid "Blocks to display on bottom"
-msgstr "Blocs à afficher en bas"
-
 #, python-format
 msgid "The following block should be displayed only once: «%(block)s»"
 msgstr "Le bloc suivant ne devrait être affiché qu'une seule fois: «%(block)s»"
@@ -426,6 +414,9 @@ msgstr "Désolé il n'y a plus aucun groupe spécial de disponible."
 
 msgid "Create a choice"
 msgstr "Créer un choix"
+
+msgid "The value doesn't match the expected format."
+msgstr "La valeur ne correspond pas au format attendu."
 
 msgid ""
 "The proposed types of resource have at least a field which can be hidden."
@@ -1546,6 +1537,21 @@ msgstr "Statut"
 msgid "Finish"
 msgstr "Terminer"
 
+msgid "Available blocks"
+msgstr "Blocs disponibles"
+
+msgid "Top of page"
+msgstr "Haut de page"
+
+msgid "Left"
+msgstr "Gauche"
+
+msgid "Right"
+msgstr "Droite"
+
+msgid "Bottom of page"
+msgstr "Bas de page"
+
 msgid "Available buttons"
 msgstr "Boutons disponibles"
 
@@ -1978,6 +1984,18 @@ msgstr "Supprimer le rôle"
 
 msgid "A deletion process for a role already exists."
 msgstr "Il y a déjà un processus de suppression pour un rôle."
+
+#~ msgid "Blocks to display on top"
+#~ msgstr "Blocs à afficher en haut"
+
+#~ msgid "Blocks to display on left side"
+#~ msgstr "Blocs à afficher à gauche"
+
+#~ msgid "Blocks to display on right side"
+#~ msgstr "Blocs à afficher à droite"
+
+#~ msgid "Blocks to display on bottom"
+#~ msgstr "Blocs à afficher en bas"
 
 #~ msgid "Property types configuration"
 #~ msgstr "Configuration des types de propriété"

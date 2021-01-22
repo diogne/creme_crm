@@ -18,9 +18,10 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
+import copy
 from typing import Tuple
 
-from django.forms import fields
+from django.forms import ValidationError, fields
 from django.forms import models as modelforms
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -28,7 +29,7 @@ from django.utils.translation import gettext_lazy as _
 from creme.creme_core.forms.widgets import UnorderedMultipleChoiceWidget
 
 from ..registry import config_registry
-from .widgets import CreatorModelChoiceWidget
+from .widgets import BricksConfigWidget, CreatorModelChoiceWidget
 
 
 class CreatorChoiceMixin:
@@ -167,3 +168,66 @@ class CustomMultiEnumChoiceField(CreatorCustomEnumChoiceMixin,
         super().__init__(coerce=int, **kwargs)
         self.custom_field = custom_field
         self.user = user
+
+
+class BricksConfigField(fields.JSONField):
+    widget = BricksConfigWidget
+
+    zones = ('top', 'left', 'right', 'bottom')
+    default_error_messages = {
+        'invalid_format': _("The value doesn't match the expected format."),
+        'invalid_choice': (
+            fields.ChoiceField.default_error_messages['invalid_choice']),
+    }
+
+    def __init__(self, *, choices=(), **kwargs):
+        kwargs.setdefault('initial', {zone: [] for zone in self.zones})
+        super().__init__(**kwargs)
+        self.choices = list(choices)
+
+    def __deepcopy__(self, memo):
+        result = super().__deepcopy__(memo)
+        result._choices = copy.deepcopy(self._choices, memo)
+        return result
+
+    def _get_choices(self):
+        return self._choices
+
+    def _set_choices(self, value):
+        # Setting choices also sets the choices on the widget.
+        # choices can be any iterable, but we call list() on it because
+        # it will be consumed more than once.
+        value = list(value)
+
+        self._choices = self.widget.choices = value
+
+    choices = property(_get_choices, _set_choices)
+
+    def clean(self, value: str):
+        value = super().clean(value)
+
+        if not isinstance(value, dict):
+            raise ValidationError(
+                self.error_messages['invalid_format'],
+                code='invalid_format',
+            )
+
+        valid_choices = {
+            choice_id for choice_id, choice_label in self.choices
+        }
+        for zone in self.zones:
+            zone_value = value.setdefault(zone, [])
+            if not isinstance(zone_value, list):
+                raise ValidationError(
+                    self.error_messages['invalid_format'],
+                    code='invalid_format',
+                )
+            for block_id in zone_value:
+                if block_id not in valid_choices:
+                    raise ValidationError(
+                        self.error_messages['invalid_choice'],
+                        code='invalid_choice',
+                        params={'value': value},
+                    )
+
+        return value
