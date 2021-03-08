@@ -395,7 +395,7 @@
 
             var button = this.findDialogButtonsByLabel(gettext("Validate the selection"), dialog);
             equal(1, button.length, 'is validation button exists');
-            button.click();
+            button.trigger('click');
         },
 
         assertOpenedListViewDialog: function() {

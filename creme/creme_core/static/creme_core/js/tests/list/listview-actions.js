@@ -712,10 +712,10 @@ QUnit.test('creme.listview.row-action (update)', function(assert) {
     }).controller();
 
     this.assertClosedPopover();
-    list.element().find('.row-actions-trigger').click();
+    list.element().find('.row-actions-trigger').trigger('click');
 
     var popover = this.assertOpenedPopover();
-    $('.listview-actions-container [data-action]', popover).click();
+    $('.listview-actions-container [data-action]', popover).trigger('click');
 
     this.assertClosedPopover();
     this.assertClosedDialog();
@@ -744,10 +744,10 @@ QUnit.test('creme.listview.row-action (delete, canceled)', function(assert) {
     }).controller();
 
     this.assertClosedPopover();
-    list.element().find('.row-actions-trigger').click();
+    list.element().find('.row-actions-trigger').trigger('click');
 
     var popover = this.assertOpenedPopover();
-    $('.listview-actions-container [data-action]', popover).click();
+    $('.listview-actions-container [data-action]', popover).trigger('click');
 
     this.assertClosedPopover();
 
@@ -764,10 +764,10 @@ QUnit.test('creme.listview.row-action (delete)', function(assert) {
     }).controller();
 
     this.assertClosedPopover();
-    list.element().find('.row-actions-trigger').click();
+    list.element().find('.row-actions-trigger').trigger('click');
 
     var popover = this.assertOpenedPopover();
-    $('.listview-actions-container [data-action]', popover).click();
+    $('.listview-actions-container [data-action]', popover).trigger('click');
 
     this.assertClosedPopover();
 
@@ -798,10 +798,10 @@ QUnit.test('creme.listview.row-action (clone, canceled)', function(assert) {
     }).controller();
 
     this.assertClosedPopover();
-    list.element().find('.row-actions-trigger').click();
+    list.element().find('.row-actions-trigger').trigger('click');
 
     var popover = this.assertOpenedPopover();
-    $('.listview-actions-container [data-action]', popover).click();
+    $('.listview-actions-container [data-action]', popover).trigger('click');
 
     this.assertClosedPopover();
 
@@ -818,10 +818,10 @@ QUnit.test('creme.listview.row-action (clone)', function(assert) {
     }).controller();
 
     this.assertClosedPopover();
-    list.element().find('.row-actions-trigger').click();
+    list.element().find('.row-actions-trigger').trigger('click');
 
     var popover = this.assertOpenedPopover();
-    $('.listview-actions-container [data-action]', popover).click();
+    $('.listview-actions-container [data-action]', popover).trigger('click');
 
     this.assertClosedPopover();
 
@@ -840,10 +840,10 @@ QUnit.test('creme.listview.row-action (form)', function(assert) {
     }).controller();
 
     this.assertClosedPopover();
-    list.element().find('.row-actions-trigger').click();
+    list.element().find('.row-actions-trigger').trigger('click');
 
     var popover = this.assertOpenedPopover();
-    $('.listview-actions-container [data-action]', popover).click();
+    $('.listview-actions-container [data-action]', popover).trigger('click');
 
     this.assertClosedPopover();
 
@@ -881,10 +881,10 @@ QUnit.test('creme.listview.row-action (redirect)', function(assert) {
     }).controller();
 
     this.assertClosedPopover();
-    list.element().find('.row-actions-trigger').click();
+    list.element().find('.row-actions-trigger').trigger('click');
 
     var popover = this.assertOpenedPopover();
-    $('.listview-actions-container [data-action]', popover).click();
+    $('.listview-actions-container [data-action]', popover).trigger('click');
 
     this.assertClosedPopover();
 
@@ -904,7 +904,7 @@ QUnit.test('creme.listview.header-actions (no selection)', function(assert) {
     equal(0, list.selectedRowsCount());
     deepEqual([], list.selectedRows());
 
-    $('.header-actions-trigger', widget.element).click();
+    $('.header-actions-trigger', widget.element).trigger('click');
 
     var popover = this.assertOpenedPopover();
 
@@ -922,13 +922,13 @@ QUnit.test('creme.listview.header-actions (open menu, 1 selection)', function(as
 
     equal(5, rows.length);
 
-    $(rows[0]).click();
+    $(rows[0]).trigger('click');
 
     // open without selection
     equal(1, list.selectedRowsCount());
     deepEqual(['1'], list.selectedRows());
 
-    $('.header-actions-trigger', widget.element).click();
+    $('.header-actions-trigger', widget.element).trigger('click');
 
     var popover = this.assertOpenedPopover();
 
@@ -946,13 +946,13 @@ QUnit.test('creme.listview.header-actions (open menu, 2 selections)', function(a
 
     equal(5, rows.length);
 
-    $(rows[0]).click();
-    $(rows[2]).click();
+    $(rows[0]).trigger('click');
+    $(rows[2]).trigger('click');
 
     // open without selection
     deepEqual(['1', '3'], list.selectedRows());
 
-    $('.header-actions-trigger', widget.element).click();
+    $('.header-actions-trigger', widget.element).trigger('click');
 
     var popover = this.assertOpenedPopover();
 
@@ -970,12 +970,12 @@ QUnit.test('creme.listview.header-actions (open menu, all selections)', function
 
     equal(5, rows.length);
 
-    rows.click();
+    rows.trigger('click');
 
     // open without selection
     equal(5, list.selectedRowsCount());
 
-    $('.header-actions-trigger', widget.element).click();
+    $('.header-actions-trigger', widget.element).trigger('click');
 
     var popover = this.assertOpenedPopover();
 
@@ -991,33 +991,33 @@ QUnit.test('creme.listview.header-actions (open menu, click)', function(assert) 
     var list = widget.controller();
     var rows = widget.element.find('table:first tr.selectable');
 
-    $(rows[0]).click();
-    $(rows[2]).click();
+    $(rows[0]).trigger('click');
+    $(rows[2]).trigger('click');
 
     equal(2, list.selectedRowsCount());
 
-    $('.header-actions-trigger', widget.element).click();
+    $('.header-actions-trigger', widget.element).trigger('click');
     var popover = this.assertOpenedPopover();
 
-    popover.find('.listview-action [data-action="merge-selection"]').click();
+    popover.find('.listview-action [data-action="merge-selection"]').trigger('click');
     this.assertClosedPopover();
 
     this.assertClosedDialog();
     deepEqual(['/mock/entity/merge?id1=1&id2=3'], this.mockRedirectCalls());
 
-    $('.header-actions-trigger', widget.element).click();
+    $('.header-actions-trigger', widget.element).trigger('click');
     popover = this.assertOpenedPopover();
 
-    popover.find('.listview-action [data-action="delete-selection"]').click();
+    popover.find('.listview-action [data-action="delete-selection"]').trigger('click');
     this.assertClosedPopover();
 
     this.assertOpenedConfirmDialog(gettext('Are you sure ?'));
     this.closeDialog();
 
-    $('.header-actions-trigger', widget.element).click();
+    $('.header-actions-trigger', widget.element).trigger('click');
     popover = this.assertOpenedPopover();
 
-    popover.find('.listview-action [data-action="addto-selection"]').click();
+    popover.find('.listview-action [data-action="addto-selection"]').trigger('click');
     this.assertClosedPopover();
 
     this.assertOpenedDialog();
