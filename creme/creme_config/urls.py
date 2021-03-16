@@ -11,6 +11,7 @@ from .views import (
     fields_config,
     generics_views,
     history,
+    menu,
     portal,
     relation_type,
     search,
@@ -453,6 +454,34 @@ bricks_patterns = [
     ),
 ]
 
+menu_patterns = [
+    re_path(
+        r'^portal[/]?$',
+        menu.Portal.as_view(),
+        name='creme_config__menu',
+    ),
+    re_path(
+        r'^add/container[/]?$',
+        menu.ContainerAdding.as_view(),
+        name='creme_config__add_container_menu_entry',
+    ),
+    re_path(
+        r'^add/special[/]?$',
+        menu.SpecialContainerAdding.as_view(),
+        name='creme_config__add_special_container_menu_entry',
+    ),
+    re_path(
+        r'^container/edit/(?P<item_id>\d+)[/]?$',
+        menu.ContainerEdition.as_view(),
+        name='creme_config__edit_container_menu_entry',
+    ),
+    re_path(
+        r'^delete/container[/]?$',
+        menu.ContainerDeletion.as_view(),
+        name='creme_config__delete_container_menu_entry',
+    ),
+]
+
 button_menu_patterns = [
     re_path(
         r'^portal[/]?$',
@@ -546,6 +575,7 @@ urlpatterns = [
     re_path(r'^custom_fields/', include(custom_fields_patterns)),
     re_path(r'^custom_forms/',  include(custom_forms_patterns)),
     re_path(r'^bricks/',        include(bricks_patterns)),
+    re_path(r'^menu/',          include(menu_patterns)),
     re_path(r'^button_menu/',   include(button_menu_patterns)),
     re_path(r'^search/',        include(search_patterns)),
     re_path(r'^history/',       include(history_patterns)),

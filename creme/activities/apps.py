@@ -214,6 +214,23 @@ class ActivitiesConfig(CremeAppConfig):
             priority=25,
         )
 
+    def register_menu_entries(self, menu_registry):
+        from . import menu
+
+        menu_registry.register(
+            menu.CalendarEntry,
+
+            menu.ActivitiesEntry,
+            menu.PhoneCallsEntry,
+            menu.MeetingsEntry,
+
+            menu.ActivityCreationEntry,
+            menu.PhoneCallCreationEntry,
+            menu.MeetingCreationEntry,
+        )
+
+        # TODO: creation panel
+
     def register_smart_columns(self, smart_columns_registry):
         smart_columns_registry.register_model(self.Activity) \
                               .register_field('title') \

@@ -3,25 +3,561 @@
 from xml.etree import ElementTree
 
 from django.test.client import RequestFactory
+from django.urls import reverse
+from django.utils.html import escape
+from django.utils.translation import gettext as _
+from django.utils.translation import ngettext
 
-# from creme.creme_core.gui.menu import OnClickItem
+from creme.creme_core.gui.last_viewed import LastViewedItem
 from creme.creme_core.gui.menu import (
+    ContainerEntry,
     ContainerItem,
+    CreationEntry,
     CreationFormsItem,
     ItemGroup,
     LabelItem,
+    ListviewEntry,
     Menu,
+    MenuEntry,
+    MenuRegistry,
+    Separator0Entry,
+    URLEntry,
     URLItem,
     ViewableItem,
+    menu_registry,
 )
-from creme.creme_core.tests.fake_models import (
+from creme.creme_core.menu import (
+    CremeEntry,
+    HomeEntry,
+    JobsEntry,
+    LogoutEntry,
+    RecentEntitiesEntry,
+    TrashEntry,
+)
+from creme.creme_core.models import (
+    CremeEntity,
     FakeActivity,
     FakeContact,
     FakeDocument,
     FakeOrganisation,
+    MenuConfigItem,
 )
 
 from ..base import CremeTestCase
+from ..fake_menu import FakeContactCreationEntry, FakeContactsEntry
+
+
+# TODO: rename ?? merge into MenuTestCase ?
+class MenuRegistryTestCase(CremeTestCase):
+    def setUp(self):
+        super().setUp()
+        self.maxDiff = None
+
+    def build_context(self, user=None):
+        user = user or self.user
+
+        return {
+            'request': self.build_request(user=user),
+            'user': user,
+            # 'THEME_NAME': 'icecream',
+        }
+
+    def test_entry01(self):
+        self.login()
+
+        item = MenuConfigItem(order=0, entry_id=MenuEntry.id, name='')
+        entry0 = MenuEntry(config_item=item)
+        self.assertEqual('', entry0.id)
+        self.assertEqual('', entry0.label)
+        self.assertIs(entry0.is_required, False)
+        self.assertIs(item,  entry0.config_item)
+
+        ctxt = self.build_context()
+        self.assertHTMLEqual(
+            '<span class="ui-creme-navigation-text-entry"></span>',
+            entry0.render(ctxt),
+        )
+
+        # ---
+        entry_id = 'creme_core-my_entry'
+        entry_label = 'Do stuff'
+
+        class MyEntry01(MenuEntry):
+            id = entry_id
+            label = entry_label
+
+        entry1 = MyEntry01(config_item=MenuConfigItem(entry_id=MyEntry01.id, name=''))
+        self.assertEqual(entry_id,    entry1.id)
+        self.assertEqual(entry_label, entry1.label)
+
+        self.assertHTMLEqual(
+            f'<span class="ui-creme-navigation-text-entry">{entry_label}</span>',
+            entry1.render(ctxt),
+        )
+
+        # ---
+        class MyEntry02(MenuEntry):
+            id = entry_id
+
+        entry2 = MyEntry02(
+            config_item=MenuConfigItem(entry_id=MyEntry02.id, name=entry_label),
+        )
+        self.assertEqual(entry_id,    entry2.id)
+        self.assertEqual(entry_label, entry2.label)
+
+    def test_entry02(self):
+        "No item given."
+        self.login()
+
+        entry = MenuEntry()
+        self.assertEqual('', entry.id)
+        self.assertEqual('', entry.label)
+
+        item01 = entry.config_item
+        self.assertIsInstance(item01, MenuConfigItem)
+        self.assertIsNone(item01.id)
+        self.assertEqual(0, item01.order)
+        self.assertEqual('', item01.name)
+        self.assertEqual('', item01.entry_id)
+
+        # ---
+        entry_id = 'creme_core-my_entry'
+
+        class MyEntry02(MenuEntry):
+            id = entry_id
+
+        item02 = MyEntry02().config_item
+        self.assertIsInstance(item02, MenuConfigItem)
+        self.assertEqual(entry_id, item02.entry_id)
+
+    def test_url_entry01(self):
+        self.login(is_superuser=False)
+
+        entry_label = 'Home'
+        entry_url_name = 'creme_core__home'
+
+        class TestEntry(URLEntry):
+            id = 'creme_core-test'
+            label = entry_label
+            url_name = entry_url_name
+
+        self.assertHTMLEqual(
+            f'<a href="{reverse(entry_url_name)}">{entry_label}</a>',
+            TestEntry().render(self.build_context()),
+        )
+
+    def test_url_entry02(self):
+        "With permissions OK."
+        self.login(is_superuser=False, admin_4_apps=['creme_config'])
+
+        entry_label = 'Home'
+        entry_url_name = 'creme_core__home'
+
+        class TestEntry01(URLEntry):
+            id = 'creme_core-test'
+            label = entry_label
+            url_name = entry_url_name
+            permissions = 'creme_core'
+
+        expected = f'<a href="{reverse(entry_url_name)}">{entry_label}</a>'
+        ctxt = self.build_context()
+        self.assertHTMLEqual(expected, TestEntry01().render(ctxt))
+
+        # ----
+        class TestEntry02(TestEntry01):
+            permissions = ('creme_core', 'creme_config.can_admin')
+
+        self.assertHTMLEqual(expected, TestEntry02().render(ctxt))
+
+    def test_url_entry03(self):
+        "With permissions KO."
+        self.login(is_superuser=False)
+
+        entry_label = 'Home'
+
+        class TestEntry01(URLEntry):
+            id = 'creme_core-test'
+            label = entry_label
+            url_name = 'creme_core__home'
+            permissions = 'creme_config'  # <===
+
+        expected = f'<span class="ui-creme-navigation-text-entry forbidden">{entry_label}</span>'
+        ctxt = self.build_context()
+        self.assertHTMLEqual(expected, TestEntry01().render(ctxt))
+
+        # ----
+        class TestEntry02(TestEntry01):
+            permissions = ('creme_core', 'creme_config')
+
+        self.assertHTMLEqual(expected, TestEntry02().render(ctxt))
+
+    def test_creation_entry01(self):
+        self.login()
+
+        entry01 = CreationEntry()
+        self.assertEqual(_('Create an entity'), entry01.label)
+
+        with self.assertRaises(ValueError):
+            entry01.url  # NOQA
+
+        ctxt = self.build_context()
+        with self.assertRaises(ValueError):
+            entry01.render(ctxt)
+
+        # ---
+        entry02 = FakeContactCreationEntry()
+        entry_label = _('Create a contact')
+        self.assertEqual(entry_label, entry02.label)
+
+        entry_url = reverse('creme_core__create_fake_contact')
+        self.assertEqual(entry_url, entry02.url)
+
+        self.assertHTMLEqual(
+            f'<a href="{entry_url}">{entry_label}</a>',
+            entry02.render(ctxt),
+        )
+
+        # ---
+        entry03 = FakeContactCreationEntry()  # No item
+        self.assertEqual(entry_label, entry03.label)
+
+    def test_creation_entry02(self):
+        "Not super-user, but allowed."
+        self.login(is_superuser=False, creatable_models=[FakeContact])
+
+        self.assertHTMLEqual(
+            f'<a href="{reverse("creme_core__create_fake_contact")}">'
+            f'{_("Create a contact")}'
+            f'</a>',
+            FakeContactCreationEntry().render(self.build_context()),
+        )
+
+    def test_creation_entry03(self):
+        "Not allowed."
+        self.login(is_superuser=False)  # creatable_models=[FakeContact]
+
+        self.assertHTMLEqual(
+            f'<span class="ui-creme-navigation-text-entry forbidden">'
+            f'{_("Create a contact")}'
+            f'</span>',
+            FakeContactCreationEntry().render(self.build_context()),
+        )
+
+    def test_listview_item01(self):
+        self.login()
+
+        ctxt = self.build_context()
+        item = MenuConfigItem(entry_id=ListviewEntry.id)
+
+        entry01 = ListviewEntry(config_item=item)
+        self.assertEqual('Entities', entry01.label)
+
+        with self.assertRaises(ValueError):
+            entry01.url  # NOQA
+
+        with self.assertRaises(ValueError):
+            entry01.render(ctxt)
+
+        # ----
+        entry02 = FakeContactsEntry(config_item=item)
+        entry_label = 'Test Contacts'
+        self.assertEqual(entry_label, entry02.label)
+
+        entry_url = reverse('creme_core__list_fake_contacts')
+        self.assertEqual(entry_url, entry02.url)
+
+        self.assertHTMLEqual(
+            f'<a href="{entry_url}">{entry_label}</a>',
+            entry02.render(ctxt),
+        )
+
+    def test_listview_item02(self):
+        "Not super-user, but allowed."
+        self.login(is_superuser=False)
+
+        self.assertHTMLEqual(
+            f'<a href="{reverse("creme_core__list_fake_contacts")}">Test Contacts</a>',
+            FakeContactsEntry().render(self.build_context()),
+        )
+
+    def test_listview_item03(self):
+        "Not allowed."
+        self.login(is_superuser=False, allowed_apps=['creme_config'])
+
+        self.assertHTMLEqual(
+            '<span class="ui-creme-navigation-text-entry forbidden">'
+            'Test Contacts'
+            '</span>',
+            FakeContactsEntry().render(self.build_context()),
+        )
+
+    def test_container_entry(self):
+        self.login()
+        ctxt = self.build_context()
+
+        label = 'Main'
+        item = MenuConfigItem(entry_id=ContainerEntry.id, name=label)
+        entry01 = ContainerEntry(config_item=item)
+        self.assertEqual('creme_core-container', entry01.id)
+        self.assertEqual(label, entry01.label)
+        self.assertFalse(entry01.is_required)
+        self.assertListEqual([], [*entry01.children])
+
+        render = entry01.render(ctxt)
+        self.assertStartsWith(render, label)
+        self.assertHTMLEqual('<ul></ul>', render[len(label):])
+
+        # ----
+        children = [
+            FakeContactsEntry(
+                config_item=MenuConfigItem(id=2, order=0, entry_id=FakeContactsEntry.id),
+            ),
+            FakeContactCreationEntry(
+                config_item=MenuConfigItem(id=3, order=1, entry_id=FakeContactCreationEntry.id),
+            ),
+        ]
+
+        entry02 = ContainerEntry(config_item=item, children=children)
+        self.assertListEqual(children, [*entry02.children])
+
+        self.assertHTMLEqual(
+            f'<ul>'
+            f'  <li class="ui-creme-navigation-item-id_{FakeContactsEntry.id} '
+            f'ui-creme-navigation-item-level1">'
+            f'    <a href="{reverse("creme_core__list_fake_contacts")}">Test Contacts</a>'
+            f'  </li>'
+            f'  <li class="ui-creme-navigation-item-id_{FakeContactCreationEntry.id} '
+            f'ui-creme-navigation-item-level1">'
+            f'    <a href="{reverse("creme_core__create_fake_contact")}">'
+            f'          {escape(_("Create a contact"))}'
+            f'    </a>'
+            f'  </li>'
+            f'</ul>',
+            entry02.render(ctxt)[len(label):],
+        )
+
+    # TODO: complete
+    def test_separator0_entry(self):
+        # self.login()
+        # entry = Separator0Entry()
+        Separator0Entry()
+
+        # entry_id = 'creme_core-home'
+        # self.assertEqual(entry_id, entry.id)
+        #
+        # entry_label = _('Home')
+        # self.assertEqual(entry_label, entry.label)
+        #
+        # entry_url = reverse('creme_core__home')
+        # self.assertEqual(entry_url, entry.url)
+        #
+        # self.assertHTMLEqual(
+        #     f'<a href="{entry_url}">{entry_label}</a>',
+        #     entry.render(self.build_context()),
+        # )
+
+    def test_home_entry(self):
+        self.login()
+        entry = HomeEntry()
+
+        entry_id = 'creme_core-home'
+        self.assertEqual(entry_id, entry.id)
+
+        entry_label = _('Home')
+        self.assertEqual(entry_label, entry.label)
+
+        entry_url = reverse('creme_core__home')
+        self.assertEqual(entry_url, entry.url)
+
+        self.assertHTMLEqual(
+            f'<a href="{entry_url}">{entry_label}</a>',
+            entry.render(self.build_context()),
+        )
+
+    def test_jobs_entry(self):
+        self.login()
+        entry = JobsEntry()
+
+        entry_id = 'creme_core-jobs'
+        self.assertEqual(entry_id, entry.id)
+
+        entry_label = _('Jobs')
+        self.assertEqual(entry_label, entry.label)
+
+        entry_url = reverse('creme_core__jobs')
+        self.assertEqual(entry_url, entry.url)
+
+        self.assertHTMLEqual(
+            f'<a href="{entry_url}">{entry_label}</a>',
+            entry.render(self.build_context()),
+        )
+
+    def test_trash_entry(self):
+        user = self.login()
+        entry = TrashEntry()
+
+        entry_id = 'creme_core-trash'
+        self.assertEqual(entry_id, entry.id)
+
+        entry_label = _('Trash')
+        self.assertEqual(entry_label, entry.label)
+
+        entry_url = reverse('creme_core__trash')
+        self.assertEqual(entry_url, entry.url)
+
+        FakeOrganisation.objects.create(user=user, name='Acme', is_deleted=True)
+        count = CremeEntity.objects.filter(is_deleted=True).count()
+        count_label = ngettext(
+            '{count} entity',
+            '{count} entities',
+            count,
+        ).format(count=count)
+        self.assertHTMLEqual(
+            f'<a href="{entry_url}">'
+            f'{entry_label} '
+            f'<span class="ui-creme-navigation-punctuation">(</span>'
+            f'{count_label}'
+            f'<span class="ui-creme-navigation-punctuation">)</span>'
+            f'</a>',
+            entry.render(self.build_context()),
+        )
+
+    def test_logout_entry(self):
+        self.login()
+
+        entry = LogoutEntry()
+        self.assertEqual('creme_core-logout', entry.id)
+        self.assertEqual(_('Log out'), entry.label)
+        self.assertEqual(reverse('creme_logout'), entry.url)
+
+    def test_creme_entry(self):
+        self.login()
+
+        entry = CremeEntry()
+        self.assertEqual('Creme', entry.label)
+        self.assertEqual('creme_core-creme', entry.id)
+        self.assertEqual(0, entry.level)
+        self.assertIs(entry.is_required, True)
+
+        children = [*entry.children]
+
+        def assertInChildren(entry_cls):
+            for child in children:
+                if isinstance(child, entry_cls):
+                    return
+
+            self.fail(f'No child with class {entry_cls} found in {children}.')
+
+        assertInChildren(HomeEntry)
+        assertInChildren(TrashEntry)
+        assertInChildren(LogoutEntry)
+        # TODO: complete
+
+        render = entry.render(self.build_context())
+        self.assertStartsWith(render, 'Creme')
+
+        # TODO
+        # self.assertHTMLEqual(
+        #     ......,
+        #     render,
+        # )
+
+    def test_recent_entities_entry01(self):
+        user = self.login()
+        contact1 = user.linked_contact
+        contact2 = self.other_user.linked_contact
+
+        ctxt = self.build_context()
+        request = ctxt['request']
+        LastViewedItem(request, contact1)
+        LastViewedItem(request, contact2)
+
+        entry = RecentEntitiesEntry()
+        self.assertEqual(0, entry.level)
+
+        entry_id = 'creme_core-recent_entities'
+        self.assertEqual(entry_id, entry.id)
+
+        entry_label = _('Recent entities')
+        self.assertEqual(entry_label, entry.label)
+
+        render = entry.render(ctxt)
+        self.assertStartsWith(render, entry_label)
+        self.assertHTMLEqual(
+            f'<ul>'
+            f'  <li><a href="{contact2.get_absolute_url()}">{contact2}</a></li>'
+            f'  <li><a href="{contact1.get_absolute_url()}">{contact1}</a></li>'
+            f'</ul>',
+            render[len(entry_label):],
+        )
+
+    def test_recent_entities_entry02(self):
+        self.login()
+        entry = RecentEntitiesEntry()
+
+        entry_label = _('Recent entities')
+        self.assertEqual(entry_label, entry.label)
+
+        render = entry.render(self.build_context())
+        self.assertStartsWith(render, entry_label)
+        self.assertHTMLEqual(
+            '<ul>'
+            '   <li><span class="ui-creme-navigation-text-entry">{}</span></li>'
+            '</ul>'.format(escape(_('No recently visited entity'))),
+            render[len(entry_label):],
+        )
+
+    # TODO: test_quick_forms_entry (entries?)
+
+    def test_registry01(self):
+        items = [MenuConfigItem(entry_id=CremeEntry.id)]
+
+        registry = MenuRegistry()
+        self.assertListEqual([], registry.get_entries(items))
+        self.assertListEqual([], [*registry.entry_classes])
+
+        # -------------
+        registry.register(FakeContactsEntry, CremeEntry)
+        self.assertSetEqual({FakeContactsEntry, CremeEntry}, {*registry.entry_classes})
+
+        entries = registry.get_entries(items)
+        self.assertIsInstance(entries, list)
+        self.assertEqual(1, len(entries))
+        self.assertIsInstance(entries[0], CremeEntry)
+
+    def test_registry02(self):
+        "Container with children."
+        container_item = MenuConfigItem(id=1, entry_id=ContainerEntry.id, name='Contact')
+        sub_items = [
+            MenuConfigItem(entry_id=FakeContactsEntry.id, parent_id=container_item.id),
+            MenuConfigItem(entry_id=FakeContactCreationEntry.id, parent_id=container_item.id),
+        ]
+
+        registry = MenuRegistry().register(
+            ContainerEntry, FakeContactsEntry, FakeContactCreationEntry,
+        )
+        self.assertListEqual([], registry.get_entries(sub_items))
+
+        # -------------
+        registry.register(FakeContactsEntry, CremeEntry)
+        entries = registry.get_entries([container_item, *sub_items])
+        self.assertIsInstance(entries, list)
+        self.assertEqual(1, len(entries))
+
+        entry = entries[0]
+        self.assertIsInstance(entry, ContainerEntry)
+
+        children = [*entry.children]
+        self.assertEqual(2, len(children))
+        self.assertIsInstance(children[0], FakeContactsEntry)
+        self.assertIsInstance(children[1], FakeContactCreationEntry)
+
+    def test_global_registry(self):
+        entry_classes = {*menu_registry.entry_classes}
+        self.assertIn(ContainerEntry,      entry_classes)
+        self.assertIn(CremeEntry,          entry_classes)
+        self.assertIn(RecentEntitiesEntry, entry_classes)
+        # self.assertIn(LogoutEntry,         entry_classes)
 
 
 class MenuTestCase(CremeTestCase):
@@ -978,54 +1514,6 @@ class MenuTestCase(CremeTestCase):
             f'<span class="ui-creme-navigation-text-entry">{label}</span>',
             item.render(self.build_context()),
         )
-
-#     def test_render_onclick_item01(self):
-#         "No icon"
-#         item = OnClickItem('add_contact', label='Add a contact',
-#                            # Should be escaped
-#                            onclick='creme.persons.contact_popup("Create a contact")',
-#                           )
-#
-#         self.assertXMLEqual(
-#             '<a onclick="creme.persons.contact_popup(\u0022Create a contact\u0022)">'
-#             'Add a contact'
-#             '</a>',
-#             item.render(self.build_context())
-#         )
-#
-#     def test_render_onclick_item02(self):
-#         "Icon & label"
-#         icon = 'images/creme_30.png'
-#         item = OnClickItem('add_contact', label='Add a contact',
-#                            icon=icon, icon_label='Contact',
-#                            onclick='creme.persons.add_contact()',
-#                           )
-#
-#         self.assertXMLEqual('<a onclick="creme.persons.add_contact()">'
-#                                 '<img src="%s" height="30" width="30" alt="Contact" />'
-#                                 'Add a contact'
-#                             '</a>' % get_creme_media_url(self.theme, icon),
-#                             item.render(self.build_context())
-#                            )
-#
-#
-#     def test_render_onclick_item03(self):
-#         "Not allowed"
-#         self.login(is_superuser=False)
-#
-#         icon = 'images/creme_30.png'
-#         item = OnClickItem('add_contact', label='Add a contact',
-#                            icon=icon, icon_label='Contact',
-#                            onclick='creme.persons.add_contact()',
-#                            perm='creme_core.add_fakecontact',
-#                           )
-#
-#         self.assertXMLEqual('<span class="forbidden">'
-#                                 '<img src="%s" height="30" width="30" alt="Contact" />'
-#                                 'Add a contact'
-#                             '</span>' % get_creme_media_url(self.theme, icon),
-#                             item.render(self.build_context())
-#                            )
 
     def test_render_container_item01(self):
         "No icon."

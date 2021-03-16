@@ -72,6 +72,7 @@ class CremeConfigConfig(CremeAppConfig):
             bricks.ExportButtonBrick,
             bricks.FieldsConfigsBrick,
             bricks.CustomBricksConfigBrick,
+            bricks.MenuBrick,
             bricks.ButtonMenuBrick,
             bricks.UsersBrick,
             bricks.TeamsBrick,
@@ -195,3 +196,10 @@ class CremeConfigConfig(CremeAppConfig):
             ),
             priority=10000,
         )
+
+    def register_menu_entries(self, menu_registry):
+        from . import menu
+
+        menu_registry.register(menu.CremeConfigEntry)
+
+        # TODO: hook CremeEntry: TimezoneEntry, MySettings

@@ -98,6 +98,16 @@ class TicketsConfig(CremeAppConfig):
             'tickets-create_ticket', Ticket, priority=100,
         )
 
+    def register_menu_entries(self, menu_registry):
+        from . import menu
+
+        menu_registry.register(
+            menu.TicketsEntry,
+            menu.TicketCreationEntry,
+        )
+
+        # TODO: creation panel
+
     def register_smart_columns(self, smart_columns_registry):
         smart_columns_registry.register_model(
             self.Ticket

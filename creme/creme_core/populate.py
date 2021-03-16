@@ -2,7 +2,7 @@
 
 ################################################################################
 #    Creme is a free/open-source Customer Relationship Management software
-#    Copyright (C) 2009-2020  Hybird
+#    Copyright (C) 2009-2021  Hybird
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as published by
@@ -25,7 +25,9 @@ from django.contrib.auth import get_user_model
 from django.utils.translation import gettext as _
 
 from . import bricks, constants, creme_jobs, sandboxes, setting_keys
+from .gui.menu import ContainerEntry
 from .management.commands.creme_populate import BasePopulator
+from .menu import CremeEntry, JobsEntry, RecentEntitiesEntry
 from .models import (
     BrickDetailviewLocation,
     BrickHomeLocation,
@@ -35,6 +37,7 @@ from .models import (
     Currency,
     Job,
     Language,
+    MenuConfigItem,
     RelationType,
     Sandbox,
     SettingValue,
@@ -51,8 +54,10 @@ class Populator(BasePopulator):
         if not CaseSensitivity.objects.exists():
             CaseSensitivity.objects.create(text='CasE')
 
-        RelationType.create((constants.REL_SUB_HAS, _('owns')),
-                            (constants.REL_OBJ_HAS, _('belongs to')))
+        RelationType.create(
+            (constants.REL_SUB_HAS, _('owns')),
+            (constants.REL_OBJ_HAS, _('belongs to')),
+        )
 
         # ---------------------------
         create_svalue = SettingValue.objects.get_or_create
@@ -100,7 +105,23 @@ class Populator(BasePopulator):
         )
 
         # ---------------------------
+        if not MenuConfigItem.objects.filter(entry_id=CremeEntry.id).exists():
+            create_mitem = MenuConfigItem.objects.create
+            create_mitem(entry_id=CremeEntry.id, order=0)
+            # TODO: separator 1
 
+            tools = create_mitem(entry_id=ContainerEntry.id, name=_('Tools'), order=100)
+            create_mitem(entry_id=JobsEntry.id, parent=tools, order=5)
+
+            # TODO: separator 1000
+            create_mitem(entry_id=ContainerEntry.id, name=_('+ Creation'), order=1010)
+            # TODO: groups
+            # TODO: quickforms
+            # TODO: other creation
+
+            create_mitem(entry_id=RecentEntitiesEntry.id, order=1020)
+
+        # ---------------------------
         if not already_populated:
             login = password = 'root'
             root = get_user_model().objects.create_superuser(
@@ -110,10 +131,11 @@ class Populator(BasePopulator):
             )
 
             if self.verbosity:
-                self.stdout.write(f'\n A super-user has been created with '
-                                  f'login="{login}" and password="{password}".',
-                                  self.style.NOTICE,
-                                 )
+                self.stdout.write(
+                    f'\n A super-user has been created with '
+                    f'login="{login}" and password="{password}".',
+                    self.style.NOTICE,
+                )
 
             # ---------------------------
             create_if_needed(

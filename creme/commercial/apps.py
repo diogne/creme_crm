@@ -171,6 +171,24 @@ class CommercialConfig(CremeAppConfig):
             'commercial-create_pattern', Pattern,  priority=60,
         )
 
+    def register_menu_entries(self, menu_registry):
+        from . import menu
+
+        menu_registry.register(
+            menu.ActsEntry,
+            menu.StrategiesEntry,
+            menu.PatternsEntry,
+            menu.SegmentsEntry,
+
+            menu.SalesmenEntry,
+
+            menu.ActCreationEntry,
+            menu.StrategyCreationEntry,
+            menu.PatternCreationEntry,
+        )
+
+        # TODO: creation panel
+
     def register_setting_keys(self, setting_key_registry):
         from . import setting_keys
 

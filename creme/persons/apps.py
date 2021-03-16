@@ -196,6 +196,24 @@ class PersonsConfig(CremeAppConfig):
             'create_organisation', Organisation, priority=5,
         )
 
+    def register_menu_entries(self, menu_registry):
+        # from creme.creme_core.menu import CremeEntry
+        from . import menu
+
+        # # TODO: insert after separator
+        # CremeEntry.child_classes
+
+        menu_registry.register(
+            menu.ContactsEntry,
+            menu.OrganisationsEntry,
+            menu.CustomersEntry,
+
+            menu.ContactCreationEntry,
+            menu.OrganisationCreationEntry,
+        )
+
+        # TODO: creation panel
+
     def register_merge_forms(self, merge_form_registry):
         from .forms.merge import get_merge_form_builder as form_builder
 

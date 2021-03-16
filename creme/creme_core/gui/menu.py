@@ -20,6 +20,7 @@
 
 import logging
 import math
+from collections import defaultdict
 from typing import (
     Callable,
     Dict,
@@ -27,6 +28,7 @@ from typing import (
     List,
     Mapping,
     Optional,
+    Sequence,
     Set,
     Type,
     Union,
@@ -39,13 +41,228 @@ from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy, ngettext
 
 from ..auth import build_creation_perm as cperm
-from ..models import CremeEntity
+from ..models import CremeEntity, MenuConfigItem
 from ..templatetags.creme_widgets import get_icon_by_name, get_icon_size_px
 from ..utils.media import get_current_theme_from_context
 from ..utils.serializers import json_encode
 from ..utils.unicode_collation import collator
 
 logger = logging.getLogger(__name__)
+
+
+# TODO: types
+# TODO: doc(string)
+class MenuEntry:
+    id: str = ''  # TODO: check ??
+    label: str = ''
+    level: int = 1  # 0 or 1   # TODO: check ?? type ?
+    is_required = False
+    permissions: Union[str, Sequence[str], None] = None
+
+    def __init__(self,
+                 config_item: Optional[MenuConfigItem] = None,
+                 children: Iterator['MenuEntry'] = ()):
+        if config_item is None:
+            config_item = MenuConfigItem(order=0, entry_id=self.id, name='')
+
+        self._config_item = config_item
+        self.label = config_item.name or self.label
+
+        # assert not children TODO ?
+
+    @property
+    def config_item(self):
+        return self._config_item
+
+    def _has_perm(self, context) -> bool:
+        permissions = self.permissions
+
+        if permissions:
+            user = context['user']
+            return (
+                user.has_perm(permissions)
+                if isinstance(permissions, str) else
+                user.has_perms(permissions)
+            )
+
+        return True
+
+    def render_label(self, context):
+        return self.label
+
+    # def render(self, context, level=0) -> str:
+    def render(self, context) -> str:
+        # raise NotImplementedError  TODO VS ViewableEntry ??
+        return format_html(
+            '<span class="ui-creme-navigation-text-entry">{label}</span>',
+            label=self.render_label(context),
+        )
+
+
+class URLEntry(MenuEntry):
+    url_name = ''
+
+    @property
+    def url(self) -> str:
+        url_name = self.url_name
+        if url_name:
+            return reverse(url_name)
+
+        raise ValueError(f'{self} has an empty URL name.')
+
+    # TODO: factorise
+    def render(self, context):
+        label = self.render_label(context)
+
+        if not self._has_perm(context):
+            return format_html(
+                '<span class="ui-creme-navigation-text-entry forbidden">{}</span>',
+                label,
+            )
+
+        return format_html(
+            '<a href="{url}">{label}</a>',
+            url=self.url,
+            label=label,
+        )
+
+
+class CreationEntry(URLEntry):
+    model = CremeEntity
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        model = self.model
+        self.label = model.creation_label
+        self.permissions = cperm(model)
+
+    @property
+    def url(self):
+        url = self.model.get_create_absolute_url()
+
+        if not url:
+            raise ValueError(
+                f'CreationMenuItem: {self.model} has an empty creation URL'
+            )
+
+        return url
+
+
+class ListviewEntry(URLEntry):
+    model = CremeEntity
+    label = 'Entities'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        meta = self.model._meta
+        self.label = meta.verbose_name_plural
+        self.permissions = meta.app_label
+
+    @property
+    def url(self):
+        get_url = getattr(self.model, 'get_lv_absolute_url', None)
+
+        if get_url is None:
+            raise ValueError(
+                f'ListviewMenuItem: {self.model} has no method "get_lv_absolute_url()"'
+            )
+
+        return get_url()
+
+
+class ContainerEntry(MenuEntry):
+    id = 'creme_core-container'
+    level = 0
+
+    def __init__(self, config_item, children=()):
+        super().__init__(config_item=config_item)
+        self._children = [*children]
+
+    @property
+    def children(self):  # TODO: useful ? __iter__ ?
+        yield from self._children
+
+    # def render(self, context, level=0):
+    def render(self, context):
+        return format_html(
+            '{label}<ul>{li_tags}</ul>',
+            label=self.render_label(context),
+            # label=self.label,
+            # # TODO: attr 'no_wrapping' instead of isinstance() ??
+            li_tags=mark_safe(''.join(
+                # item.render(context, level)
+                # if isinstance(item, ItemSeparator) else
+                format_html(
+                    '<li class="ui-creme-navigation-item-level1 '
+                    'ui-creme-navigation-item-id_{id}">'
+                    '{item}'
+                    '</li>',
+                    id=entry.id,
+                    item=entry.render(context),
+                )
+                # for item in self
+                for entry in self._children
+            )),
+        )
+
+
+# TODO: complete
+class Separator0Entry(MenuEntry):
+    pass
+
+
+class MenuRegistry:
+    def __init__(self):
+        self._entry_classes = {}
+
+    def register(self, *entry_classes):
+        # TODO: duplicated IDs
+        for entry_class in entry_classes:
+            self._entry_classes[entry_class.id] = entry_class
+
+        return self
+
+    # def get(self, entry_id: str) -> Optional[MenuEntry]:
+    #     cls = self._entry_classes.get(entry_id)
+    #
+    #     return None if cls is None else cls()
+
+    @property
+    def entry_classes(self):
+        yield from self._entry_classes.values()
+
+    def get_entries(self, config_items: Iterator[MenuConfigItem]) -> List[MenuEntry]:
+        # TODO: generalise with deeper levels ?
+        entry_info = [[], []]  # NB: 2 lists for 2 levels
+        get_class = self._entry_classes.get
+
+        for item in config_items:
+            cls = get_class(item.entry_id)
+            if cls is None:
+                logger.warning(
+                    'MenuRegistry.get_entries(): invalid entry class with id="%s"',
+                    item.entry_id,
+                )
+            else:
+                try:
+                    entry_info[cls.level].append((cls, item))
+                except IndexError:
+                    logger.warning(
+                        'MenuRegistry.get_entries(): invalid level %s in class %s',
+                        cls.level, cls,
+                    )
+
+        children = defaultdict(list)
+        for entry_cls, item in entry_info[1]:
+            children[item.parent_id].append(entry_cls(config_item=item))
+
+        return [
+            entry_cls(config_item=item, children=children[item.id])
+            for entry_cls, item in entry_info[0]
+        ]
+
+
+menu_registry = MenuRegistry().register(ContainerEntry)
 
 
 def _validate_id(id_: str) -> str:
@@ -101,9 +318,6 @@ class ViewableItem(Item):
         self.icon = icon
         self.icon_label = icon_label or label
         self.perm = perm
-
-    # def __repr__(self):
-    #     return '<Item: id=%s>' % self.id
 
     def __str__(self):
         return (
@@ -567,23 +781,6 @@ class URLItem(ViewableItem):
             img=img,
             label=label,
         )
-
-
-# class OnClickItem(Item):
-#     def __init__(self, id, onclick, *args, **kwargs):
-#         super().__init__(id, *args, **kwargs)
-#         self.onclick = onclick
-#
-#     def render(self, context):
-#         img = self.render_icon(context)
-#         label = self.render_label(context)
-#
-#         perm = self.perm
-#         if perm and not context['user'].has_perm(perm):
-#             return '<span class="forbidden">%s%s</span>' % (img, label)
-#
-#         # todo: cache escaped value ??
-#         return '<a onclick="%s">%s%s</a>' % (escapejs(self.onclick), img, label)
 
 
 class TrashItem(URLItem):

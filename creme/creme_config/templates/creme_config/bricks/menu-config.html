@@ -1,0 +1,69 @@
+{% extends 'creme_core/bricks/base/base.html' %}
+{# {% extends 'creme_core/bricks/base/paginated-table.html' %} #}
+{% load i18n creme_core_tags creme_bricks %}
+
+{% block brick_extra_class %}{{block.super}} creme_config-menu-brick{% endblock %}
+
+{% block brick_header_title %}
+    {% brick_header_title title=verbose_name icon='config' %}
+{% endblock %}
+
+{% block brick_content %}
+{% has_perm_to admin 'creme_core' as admin_perm %}
+    <p class="help-instructions">{% translate 'Drag and drop the containers (columns) to order them.' %}</p>
+
+    <ul class="TODO">{% url 'creme_config__delete_container_menu_entry' as delete_url %}
+        {% for entry in entries %}
+        <li class="menu-config-entry0-container">
+            <div class="menu-config-entry0">
+                <div class="menu-config-entry0-header">
+                    <span class="menu-config-entry0-header-title">{{entry.label}}</span>
+                    {% if entry.id == container_id %}{% url 'creme_config__edit_container_menu_entry' entry.config_item.id as edit_url %}
+                        {% brick_action id='edit' url=edit_url label=_('Edit this container') enabled=admin_perm %}
+                    {% endif %}
+                    {% if not entry.is_required %}
+                        {% brick_action id='delete' url=delete_url __id=entry.config_item.id label=_('Delete this container') enabled=admin_perm %}
+                    {% endif %}
+                </div>
+                <div class="menu-config-entry0-content">
+                    <ul>{% for child in entry.children %}<li>{{child.label}}</li>{% endfor %}</ul>
+                </div>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <div class="menu-config-actions">{% url 'creme_config__add_container_menu_entry' as add_url %}{% url 'creme_config__add_special_container_menu_entry' as add_special_url %}
+        {% brick_action id='add' url=add_url label=_('Add a container') display='both' enabled=admin_perm %}
+        {% brick_action id='add' url=add_special_url label=_('Add a special container') display='both' enabled=admin_perm %}
+    </div>
+{% endblock %}
+
+{% comment %}
+
+{% block brick_header_actions %}
+{% has_perm_to admin 'creme_core' as admin_perm %}{% url 'creme_config__create_history_configs' as add_url %}
+    {% brick_header_action id='add' url=add_url label=_('Add some relationship types') enabled=admin_perm %}
+{% endblock %}
+
+{% block brick_table_columns %}
+    {% brick_table_column title=_('Type') %}
+    {% brick_table_column title=_('Action') status='action' %}
+{% endblock %}
+
+{% block brick_table_rows %}
+{% has_perm_to admin 'creme_core' as admin_perm %}{% url 'creme_config__remove_history_config' as rm_url %}
+    {% for history_item in page.object_list %}
+    <tr>
+        <td>{{history_item.relation_type}}</td>
+        <td {% brick_table_data_status action %}>
+            {% brick_table_action id='delete' url=rm_url __id=history_item.id label=_('Remove this relationship type') icon='unlink' enabled=admin_perm %}
+        </td>
+    <tr>
+    {% endfor %}
+{% endblock %}
+
+{% block brick_table_empty %}
+    {% translate 'No relationship type for the moment' %}
+{% endblock %}
+{% endcomment %}

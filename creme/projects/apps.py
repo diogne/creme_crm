@@ -99,3 +99,13 @@ class ProjectsConfig(CremeAppConfig):
         ).add_link(
             'projects-create_project', Project, priority=50,
         )
+
+    def register_menu_entries(self, menu_registry):
+        from . import menu
+
+        menu_registry.register(
+            menu.ProjectsEntry,
+            menu.ProjectCreationEntry,
+        )
+
+        # TODO: creation panel
