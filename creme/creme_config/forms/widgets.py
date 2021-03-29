@@ -94,6 +94,7 @@ class ButtonMenuEditionWidget(Widget):
             if button_id is None:
                 button_id = ''
             selected = str(button_id) in value
+            # TODO: useful ?
             order = value.index(str(button_id)) + 1 if selected else 0
             options.append((order, button_id, button, selected))
 
@@ -109,4 +110,40 @@ class ButtonMenuEditionWidget(Widget):
     def get_context(self, name, value, attrs):
         context = super().get_context(name, value, attrs)
         context['widget']['choices'] = self.create_options(name, context['widget']['value'])
+        return context
+
+
+class MenuEditorWidget(Widget):
+    template_name = 'creme_config/forms/widgets/menu-editor.html'
+
+    # def create_option(self, name, button_id, button, selected):
+    #     return {
+    #         'name': name,
+    #         'value': button_id,
+    #         'label': str(button.verbose_name),
+    #         'description': str(button.description),
+    #         'selected': selected,
+    #     }
+
+    # def value_from_datadict(self, data, files, name):
+    #     return data.getlist(name)
+
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        # context['widget']['choices'] = self.create_options(name, context['widget']['value'])
+        context['widget']['entries'] = [
+            {'label': 'Contacts',          'value': {'id': 'persons-contacts'}},
+            {'label': 'Créer un contact',  'value': {'id': 'persons-add_contact'}},
+            {'label': 'Sociétés',          'value': {'id': 'persons-organisations'}},
+            {'label': 'Créer une société', 'value': {'id': 'persons-add_organisation'}},
+            # {
+            #     'label': '--- Sociétés ---', 'id': 'creme_core-group_separator',
+            #     'data': {'title': 'Sociétés'},
+            # },
+            # {
+            #     'label': 'Wiki', 'id': 'creme_core-custom_url',
+            #     'data': {'title': 'Wiki', 'url': "http://wiki.org"},
+            # },
+        ]
+
         return context

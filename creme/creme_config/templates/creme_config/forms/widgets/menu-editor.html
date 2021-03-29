@@ -1,0 +1,83 @@
+{% load i18n creme_core_tags %}
+
+<style type="text/css">
+    .menu-edit-widget .menu-edit-entries {
+        max-width: 300px;
+        margin-left: 10px;
+    }
+
+    .menu-edit-widget .menu-edit-entry {
+        border: 1px solid #d9d9d9;
+        margin-bottom: 3px;
+        padding: 3px;
+    }
+
+    .menu-edit-widget .menu-edit-widget-creations {
+        margin-top: 10px;
+    }
+</style>
+<div class="menu-edit-widget" id="{{widget.attrs.id}}">
+    <div class="help-text">{% translate 'Drag and drop the entries to order them' %}</div>
+    <div class="menu-edit-entries"></div>
+    <div class="menu-edit-widget-creations">
+        <button class="new-entry" type="button">Ajouter une entrée classique</button>
+        <button type="button">Ajouter un séparateur</button>
+        <button type="button">Ajouter une entrée personnalisée</button>
+     </div>
+</div>
+
+{{ widget.entries|json_script:"menu-widget-choices" }}
+
+<script type="text/javascript">
+    creme.MenuEditor = creme.component.Component.sub({
+        _init_: function(element, options) {
+            options = options || {};
+            var appendEntry = this.__appendEntry;
+
+            if (options.optionsId) {
+                JSON.parse(
+                    $('#${optionsId}'.template(options)).text() || '[]'
+                ).forEach(
+                    function(entryInfo) {
+                        appendEntry(element, entryInfo);
+                    }
+                );
+            }
+
+            function onSortEventHandler(event) {
+                // TODO
+                console.log('EV', event);
+            };
+
+            this._entries = new Sortable(
+                element.find(".menu-edit-entries").get(0), {
+                    group: element.attr("id"),
+                    animation: 150,
+                    onSort: onSortEventHandler
+                });
+
+            element.find('.new-entry').on('click', function(event) {
+                appendEntry(element, {
+                    name: 'TODO-name',
+                    label: 'Blabla',
+                    value: "{'id': 'TODO-TODO'}"
+                });
+            });
+        },
+
+        __appendEntry: function(element, entryInfo) {
+/*            console.log('Info =>', element, entryInfo); */
+            element.find(".menu-edit-entries").append(
+                '<div class="menu-edit-entry"">${label}<input type="hidden" name="${name}" value="${value}"/></div>'.template(
+                    $.extend({name: 'NAME'}, entryInfo)
+                )
+            );
+        }
+    });
+
+    $(document).ready(function() {
+        return new creme.MenuEditor($("#{{widget.attrs.id}}"), {
+            optionsId: 'menu-widget-choices'
+        });
+    });
+</script>

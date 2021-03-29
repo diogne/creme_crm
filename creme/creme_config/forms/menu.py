@@ -22,6 +22,7 @@ from django import forms
 from django.db.models.aggregates import Max
 from django.utils.translation import gettext_lazy as _
 
+from creme.creme_config.forms.fields import MenuEntriesField
 from creme.creme_core.forms import CremeModelForm
 from creme.creme_core.forms.widgets import OrderedMultipleChoiceWidget
 from creme.creme_core.gui.menu import ContainerEntry, menu_registry
@@ -124,9 +125,10 @@ class SpecialContainerAddingForm(CremeModelForm):
 
 # TODO: factorise/merge ??
 class ContainerEditionForm(CremeModelForm):
-    entries = forms.MultipleChoiceField(
-        label=_('Entries'), widget=OrderedMultipleChoiceWidget,
-    )
+    # entries = forms.MultipleChoiceField(
+    #     label=_('Entries'), widget=OrderedMultipleChoiceWidget,
+    # )
+    entries = MenuEntriesField(label=_('Entries'))
 
     class Meta(CremeModelForm.Meta):
         model = MenuConfigItem

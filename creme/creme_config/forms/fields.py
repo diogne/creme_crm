@@ -2,7 +2,7 @@
 
 ################################################################################
 #    Creme is a free/open-source Customer Relationship Management software
-#    Copyright (C) 2009-2020  Hybird
+#    Copyright (C) 2009-2021  Hybird
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as published by
@@ -28,7 +28,7 @@ from django.utils.translation import gettext_lazy as _
 from creme.creme_core.forms.widgets import UnorderedMultipleChoiceWidget
 
 from ..registry import config_registry
-from .widgets import CreatorModelChoiceWidget
+from . import widgets
 
 
 class CreatorChoiceMixin:
@@ -101,7 +101,7 @@ class CreatorModelChoiceMixin(CreatorChoiceMixin):
 
 class CreatorModelChoiceField(modelforms.ModelChoiceField,
                               CreatorModelChoiceMixin):
-    widget = CreatorModelChoiceWidget
+    widget = widgets.CreatorModelChoiceWidget
 
     def __init__(self, *, queryset, create_action_url='', user=None, **kwargs):
         super().__init__(queryset, **kwargs)
@@ -151,7 +151,7 @@ class CreatorCustomEnumChoiceMixin(CreatorChoiceMixin):
 
 class CustomEnumChoiceField(CreatorCustomEnumChoiceMixin,
                             fields.TypedChoiceField):
-    widget = CreatorModelChoiceWidget
+    widget = widgets.CreatorModelChoiceWidget
 
     def __init__(self, *, custom_field=None, user=None, **kwargs):
         super().__init__(coerce=int, **kwargs)
@@ -167,3 +167,7 @@ class CustomMultiEnumChoiceField(CreatorCustomEnumChoiceMixin,
         super().__init__(coerce=int, **kwargs)
         self.custom_field = custom_field
         self.user = user
+
+
+class MenuEntriesField(fields.JSONField):
+    widget = widgets.MenuEditorWidget
