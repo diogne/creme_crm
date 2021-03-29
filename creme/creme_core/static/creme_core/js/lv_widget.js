@@ -189,12 +189,13 @@ creme.lv_widget.EditSelectedAction = creme.component.Action.sub({
                        }
                    })
                    .on('frame-update', function(event, frame) {
-                       var summary = $('.bulk-selection-summary', frame.delegate());
+                       var content = frame.delegate();
+                       var summary = content.find('.bulk-selection-summary');
 
                        if (summary.length) {
                            var count = selection.length;
-                           var message = summary.attr('data-msg') || '';
-                           var plural = summary.attr('data-msg-plural');
+                           var message = summary.data('msg') || '';
+                           var plural = summary.data('msg-plural') || message;
 
                            if (pluralidx(count)) {
                                message = plural || message;
@@ -204,6 +205,12 @@ creme.lv_widget.EditSelectedAction = creme.component.Action.sub({
                            // var content = ngettext(summary.attr('data-msg'), summary.attr('data-msg-plural'), count);
                            summary.text(message.format(selection.length));
                        }
+
+                       content.on('change', '[name="_bulk_fieldname"]', function() {
+                           if ($(this).val() !== dialog.frame().lastFetchUrl()) {
+                               dialog.fetch($(this).val());
+                           }
+                       });
                    })
                    .open({width: 800});
         }

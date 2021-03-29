@@ -3,18 +3,17 @@
 (function($) {
     "use strict";
 
-    var MOCK_FORM_EDIT = '<form><input type="text" name="edit" value=""/></form>';
     var MOCK_FORM_ADDTO = '<form><input type="text" name="addto" value=""/></form>';
-    var MOCK_EDIT_SUMMARY = '<div><span class="bulk-selection-summary"></span></div>';
 
     window.QUnitListViewMixin = {
         beforeEach: function() {
             var backend = this.backend;
+            var createEditActionFormHtml = this.createEditActionFormHtml.bind(this);
 
             this.setMockBackendGET({
-                'mock/entity/edit': function(url, data, options) {
-                    return backend.response(200, MOCK_FORM_EDIT);
-                },
+                'mock/entity/edit': backend.response(200, createEditActionFormHtml()),
+                'mock/entity/edit/field-a': backend.response(200, createEditActionFormHtml({field_name: 'field-a'})),
+                'mock/entity/edit/field-b': backend.response(200, createEditActionFormHtml({field_name: 'field-b'})),
                 'mock/entity/addto': function(url, data, options) {
                     return backend.response(200, MOCK_FORM_ADDTO);
                 },
@@ -50,12 +49,12 @@
                     });
                 },
                 'mock/entity/edit': function(url, data, options) {
-                    var value = data.edit[0];
+                    var value = data.field_value[0];
 
                     if (Object.isEmpty(value)) {
-                        return backend.response(200, MOCK_FORM_EDIT);
-                    } else if (value === 'summary') {
-                        return backend.response(200, MOCK_EDIT_SUMMARY);
+                        return backend.response(200, createEditActionFormHtml({
+                            field_name: data._bulk_fieldname
+                        }));
                     } else {
                         return backend.response(200, '');
                     }
@@ -90,6 +89,36 @@
                 console.warn('Some jQuery.datepicker dialogs has not been cleaned up !');
                 $('#ui-datepicker-div').detach();
             }
+        },
+
+        createEditActionFormHtml: function(options) {
+            options = $.extend({
+                fields: [
+                    {value: 'field-a', label: 'Field A'},
+                    {value: 'field-b', label: 'Field B'}
+                ],
+                field_name: 'field-a',
+                field_value: ''
+            }, options || {});
+
+            return (
+                '<div>'
+                  + '<span class="bulk-selection-summary" data-msg="%d entity is selected" data-msg-plural="%d entities are selected"></span>'
+                  + '<form>'
+                      + '<select name="_bulk_fieldname">${fields}</selected>'
+                      + '<input type="text" name="field_value" value="${value}"/>'
+                  + '</form>'
+              + '</div>'
+            ).template({
+                fields: (options.fields || []).map(function(item) {
+                    return '<option value="${value}" ${selected}>${label}</option>'.template({
+                        value: item.value,
+                        label: item.label,
+                        selected: item.value === options.field_value ? 'selected=""' : ''
+                    });
+                }).join(''),
+                value: options.field_value
+            });
         },
 
         createActionHtml: function(options) {
